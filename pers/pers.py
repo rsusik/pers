@@ -1,4 +1,5 @@
-from typing import Any, Callable, List
+from typing import Any, Callable, List, Tuple
+from itertools import product
 from ncache import Cache
 
 class PersistentResults:
@@ -39,7 +40,6 @@ class PersistentResults:
         return list(self.results.data.values())
 
     def _flatten_result(self, res:Any)->dict:
-        # print('_flatten_result:res', res)
         if isinstance(res, dict):
             return {f'{self.result_prefix}{k}':v for k,v in res.items()}
         elif isinstance(res, (list, tuple)):
@@ -48,7 +48,69 @@ class PersistentResults:
             return {self.result_key: res}
 
 
+    def _get_args_kwargs_hash(self, el, args, kwargs):
+        _args = el[:len(args)]
+        _kwargs = dict(zip(kwargs.keys(), el[len(kwargs.keys()):]))
+        _hash = self.results.get_hash([_args, _kwargs])
+        return _args, _kwargs, _hash
+
+
+    def all(self, *args:List, **kwargs:List)->bool:
+        '''
+        Returns True if results contain all records for
+        product of given arguments and False otherwise
+        '''
+        l = product(*args, *kwargs.values())
+        for el in l:
+            _, _, _hash = self._get_args_kwargs_hash(el, args, kwargs)
+            try:
+                _ = self.results.get_value(_hash)
+            except Cache.NoCacheValue:
+                print('WRONG', el)
+                return False
+        return True
+
+
+    def any(self, *args:List, **kwargs:List)->bool:
+        '''
+        Returns True if any results contain any records 
+        from product of given arguments and False otherwise
+        '''
+        l = product(*args, *kwargs.values())
+        for el in l:
+            _, _, _hash = self._get_args_kwargs_hash(el, args, kwargs)
+            try:
+                _ = self.results.get_value(_hash)
+            except Cache.NoCacheValue:
+                continue
+            return True
+        return False
+
+    def missing(self, *args:List, **kwargs:List)->List[Tuple[list, dict]]:
+        '''
+        Returns all missing records for product of given arguments
+        '''
+        print(*args, 'kwargs', *kwargs.values())
+        l = product(*args, *kwargs.values())
+        missing = []
+        for el in l:
+            _args, _kwargs, _hash = self._get_args_kwargs_hash(el, args, kwargs)
+            try:
+                _ = self.results.get_value(_hash)
+            except Cache.NoCacheValue:
+                missing.append((_args, _kwargs))
+        return missing
+
+
     def append(self, fun:Callable, *args:Any, **kwargs:Any)->dict:
+        '''
+        Appends new result of function `fun` for given arguments
+        if it does not exists already and returns the value.
+        The function checks if a record with given arguments already
+        exists, if not then it executes function `fun` with given arguments
+        and returns the result.
+        Otherwise, returns the existing value.
+        '''
         try:
             _hash = self.results.get_hash([args, kwargs]) 
             val = self.results.get_value(_hash)  # raise NoCacheValue exception if not found
@@ -60,7 +122,6 @@ class PersistentResults:
             if self.flatten_result:
                 res = self._flatten_result(res)
                 # jeżeli w wyniku zostaly zwrocone argumenty funkcji to zignoruj te z identycznymi wartosciami
-                kwargs2 = {}
                 for k, v in kwargs.items():
                     if k in res:
                         if v != res[k]:
@@ -68,7 +129,6 @@ class PersistentResults:
                             raise Exception(f'Conflict!\nThere is argument with key {k}:{v} which is different than result with the same name {k}:{res[k]}\nYou can change the prefix or turn off flatten result')
             else:
                 res = {self.result_key: res}
-
 
             val = {
                 **res,
