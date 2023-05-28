@@ -39,6 +39,7 @@ class PersistentResults:
     def data(self)->List[dict]:
         return list(self.results.data.values())
 
+
     def _flatten_result(self, res:Any)->dict:
         if isinstance(res, dict):
             return {f'{self.result_prefix}{k}':v for k,v in res.items()}
@@ -85,6 +86,7 @@ class PersistentResults:
                 continue
             return True
         return False
+
 
     def missing(self, *args:List, **kwargs:List)->List[Tuple[list, dict]]:
         '''
@@ -141,14 +143,18 @@ class PersistentResults:
                 self.results.save_cache()
             return val
 
+
     def __getitem__(self, item:int)->dict:
         return self.data[item]
+
 
     def __getslice__(self, start:int, stop:int)->List[dict]:
         return self.data[start:stop]
 
+
     def __len__(self)->int:
         return len(self.data)
+
 
     def save(self):
         self.results.save_cache()
