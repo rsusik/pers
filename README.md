@@ -9,7 +9,8 @@
 </a>
 </p>
 
-Persistent results is a Python class that ensures the results of tests will be available even if interruptions during the tests occur.
+Persistent results is a Python class that ensures the results will be available even if interruptions occur.
+
 
 ## Installation:
 
@@ -25,7 +26,7 @@ If the code below breaks for some reason (let's say the computer shuts down beca
 
 ```python
 from pers import PersistentResults
-import pandas as pd
+import pandas as pd # pandas is not required
 
 results = PersistentResults(
     'test.pickle', # filename for result caching
@@ -39,8 +40,6 @@ for x in range(10):
         results.append(fun, x, y, a=x, b=y)
 results.save()
 
-print(results[90])
-print(len(results))
 print(pd.DataFrame(results.data))
 ```
 

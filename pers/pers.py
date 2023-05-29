@@ -51,7 +51,7 @@ class PersistentResults:
 
     def _get_args_kwargs_hash(self, el, args, kwargs):
         _args = el[:len(args)]
-        _kwargs = dict(zip(kwargs.keys(), el[len(kwargs.keys()):]))
+        _kwargs = dict(zip(kwargs.keys(), el[len(args):]))
         _hash = self.results.get_hash([_args, _kwargs])
         return _args, _kwargs, _hash
 
@@ -67,7 +67,6 @@ class PersistentResults:
             try:
                 _ = self.results.get_value(_hash)
             except Cache.NoCacheValue:
-                print('WRONG', el)
                 return False
         return True
 
@@ -92,7 +91,6 @@ class PersistentResults:
         '''
         Returns all missing records for product of given arguments
         '''
-        print(*args, 'kwargs', *kwargs.values())
         l = product(*args, *kwargs.values())
         missing = []
         for el in l:
