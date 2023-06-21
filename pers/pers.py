@@ -1,5 +1,6 @@
 from typing import Any, Callable, List, Tuple
 from itertools import product
+import inspect
 from ncache import Cache
 
 class PersistentResults:
@@ -13,6 +14,7 @@ class PersistentResults:
         result_key:str='result',      # key of the result if not flatten_result
         flatten_result:bool=True,     # flatten the results - return 2D table
         result_prefix:str='_result_', # prefix of result entries if flatten_result
+        skip_list:list[str]=None,     # list of arguments and results that shouldn't be added to results
     ):
         self.load           = load
         self.interval       = interval
@@ -21,6 +23,10 @@ class PersistentResults:
         self.result_prefix  = result_prefix
         self.result_key     = result_key
         self.exeption_on_duplicate = exeption_on_duplicate
+        if skip_list is not None:
+            self.skip_list = skip_list
+        else:
+            self.skip_list = []
 
         self.results = Cache(filename, tmpfilename=tmpfilename)
         self.counter = 0
@@ -126,14 +132,19 @@ class PersistentResults:
                     if k in res:
                         if v != res[k]:
                             # TODO: poprawic komunikat
-                            raise Exception(f'Conflict!\nThere is argument with key {k}:{v} which is different than result with the same name {k}:{res[k]}\nYou can change the prefix or turn off flatten result')
+                            raise Exception(f'Conflict!\nThere is argument with key {k}:{v} which is different than result with the same name {k}:{res[k]}\nYou can change the prefix or turn off flattening result')
             else:
                 res = {self.result_key: res}
 
+            arg_names = list(inspect.signature(fun).parameters.keys())
+            args_dict = {arg_names[idx]: el for idx, el in enumerate(args)}
+            all_args = {**args_dict, **kwargs, **res}
+
             val = {
-                **res,
-                **{f'{self.arg_prefix}{idx}':x for idx, x in enumerate(args)},
-                **kwargs,
+                # **res,
+                # **{f'{self.arg_prefix}{idx}':x for idx, x in enumerate(args)},
+                # **kwargs,
+                **{k:v for k, v in all_args.items() if k not in self.skip_list}
             }
             self.results.set_value(_hash, val)
             self.counter += 1
