@@ -136,7 +136,17 @@ class PersistentResults:
             else:
                 res = {self.result_key: res}
 
-            arg_names = list(inspect.signature(fun).parameters.keys())
+            arg_names = [k for k, param in inspect.signature(fun).parameters.items() if param.kind not in [
+                inspect.Parameter.VAR_POSITIONAL, 
+                inspect.Parameter.VAR_KEYWORD,
+                inspect.Parameter.KEYWORD_ONLY
+            ]]
+
+            arg_names_count = len(arg_names)
+            if arg_names_count < len(args):
+                for i in range(arg_names_count, len(args)):
+                    arg_names.append(f'arg_{i}')
+
             args_dict = {arg_names[idx]: el for idx, el in enumerate(args)}
             all_args = {**args_dict, **kwargs, **res}
 
