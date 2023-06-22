@@ -10,11 +10,11 @@ class PersistentResults:
         interval:int=1, 
         load:bool=True,               # if False the results will be replaced
         exeption_on_duplicate:bool=False,
-        arg_prefix:str='_arg_',       # prefix for positional arguments (by default '_arg_': _arg_0, _arg_1, ..., _arg_n)
+        arg_prefix:str='_arg_',       # prefix for positional arguments that do not have corresponding names (by default '_arg_': _arg_0, _arg_1, ..., _arg_n). Case when *args is used in function
         result_key:str='result',      # key of the result if not flatten_result
         flatten_result:bool=True,     # flatten the results - return 2D table
         result_prefix:str='_result_', # prefix of result entries if flatten_result
-        skip_list:list[str]=None,     # list of arguments and results that shouldn't be added to results
+        skip_list:list[str]=None,     # list of arguments and results that shouldn't be added to output
     ):
         self.load           = load
         self.interval       = interval
@@ -144,16 +144,13 @@ class PersistentResults:
 
             arg_names_count = len(arg_names)
             if arg_names_count < len(args):
-                for i in range(arg_names_count, len(args)):
-                    arg_names.append(f'arg_{i}')
+                for idx in range(arg_names_count, len(args)):
+                    arg_names.append(f'{self.arg_prefix}{idx}')
 
             args_dict = {arg_names[idx]: el for idx, el in enumerate(args)}
             all_args = {**args_dict, **kwargs, **res}
 
             val = {
-                # **res,
-                # **{f'{self.arg_prefix}{idx}':x for idx, x in enumerate(args)},
-                # **kwargs,
                 **{k:v for k, v in all_args.items() if k not in self.skip_list}
             }
             self.results.set_value(_hash, val)
