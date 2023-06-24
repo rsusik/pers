@@ -1,4 +1,5 @@
-from typing import Any, Callable, List, Tuple
+from operator import itemgetter
+from typing import Any, Callable, Iterable, List, Tuple
 from itertools import product
 import inspect
 from ncache import Cache
@@ -158,6 +159,28 @@ class PersistentResults:
             if self.counter % self.interval == 0:
                 self.results.save_cache()
             return val
+
+
+    def _at_least_tuple(self, x):
+        if isinstance(x, tuple):
+            return x
+        else:
+            return (x,)
+
+
+    def perform(self, fun:Callable, **kwargs:Iterable):
+        assert len(kwargs.keys())>0, 'expected at least one argument'
+        to_test = set(product(*kwargs.values()))
+
+        tested = set([
+            self._at_least_tuple(itemgetter(*kwargs.keys())(el))
+            for el in self.data
+        ])
+        
+        to_test = to_test - tested
+
+        for el in to_test:
+            self.append(fun, **dict(zip(kwargs.keys(), el)))
 
 
     def __getitem__(self, item:int)->dict:
